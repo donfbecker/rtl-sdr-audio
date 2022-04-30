@@ -62,7 +62,7 @@ void usage(void) {
 		"\t[-d device_index (default: 0)]\n"
 		"\t[-g gain (default: 0 for auto)]\n"
 		"\t[-p ppm_error (default: 0)]\n"
-		"\t[-c audio_channel [0:both, 1:left, 2:right] (default: 0)]\n"
+		"\t[-c audio_channel [0:both, 1:left, 2:right, 3:Q in left, I in right] (default: 0)]\n"
 	);
 	exit(1);
 }
@@ -93,13 +93,16 @@ static void sdr_callback(unsigned char *iqBuffer, uint32_t len, void *ctx) {
 		i = (sumI / SDR_SAMPLE_RATIO);
 		q = (sumQ / SDR_SAMPLE_RATIO);
 		a = sqrt((i * i) + (q * q));
-		if(a > maxA) maxA = a;
 
-		if(audio_channel == 0 || audio_channel == 1) g_audio_buffer[(j*2)] = q;
-		if(audio_channel == 0 || audio_channel == 2) g_audio_buffer[(j*2)+1] = q;
+		if(audio_channel == 3) {
+			g_audio_buffer[(j*2)]   = q;
+			g_audio_buffer[(j*2)+1] = i;
+		} else {
+			g_audio_buffer[(j*2)]   = (audio_channel == 0 || audio_channel == 1) ? q : 0;
+			g_audio_buffer[(j*2)+1] = (audio_channel == 0 || audio_channel == 2) ? q : 0;
+		}
 	}
 
-	fprintf(stderr, "\33[2K\r%0*d\r", (int)(maxA * 30), 0);
 	snd_pcm_writei(g_audio_handle, g_audio_buffer, AUDIO_BUFFER_LENGTH);
 }
 
